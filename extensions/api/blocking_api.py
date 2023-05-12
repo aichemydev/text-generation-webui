@@ -2,9 +2,10 @@ import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
 
-from extensions.api.util import build_parameters, try_start_cloudflared
+from extensions.api.util import build_parameters, preprocess_prompt, try_start_cloudflared
 from modules import shared
-from modules.text_generation import encode, generate_reply
+from modules.text_generation import encode
+from modules.batched_text_generation import generate_reply_batched
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -30,21 +31,28 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
 
             prompt = body['prompt']
+            if not isinstance(prompt,list):
+                prompt = [prompt]
+                body['prompt'] = prompt
+            
+            max_context = body.get('max_context_length', 2048)
+            prompt = [preprocess_prompt(p,max_context) for p in prompt]
+                
             generate_params = build_parameters(body)
             stopping_strings = generate_params.pop('stopping_strings')
             generate_params['stream'] = False
 
-            generator = generate_reply(
-                prompt, generate_params, stopping_strings=stopping_strings, is_chat=False)
+            generator = generate_reply_batched(
+                prompt, generate_params, stopping_strings=stopping_strings)
 
             answer = ''
             for a in generator:
                 answer = a
 
             response = json.dumps({
-                'results': [{
+                'results': {
                     'text': answer
-                }]
+                }
             })
             self.wfile.write(response.encode('utf-8'))
         elif self.path == '/api/v1/token-count':

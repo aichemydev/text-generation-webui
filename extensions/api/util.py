@@ -5,21 +5,17 @@ from typing import Callable, Optional
 
 from modules.text_generation import get_encoded_length
 
-
-def build_parameters(body):
-    prompt = body['prompt']
-
-    prompt_lines = [k.strip() for k in prompt.split('\n')]
-    max_context = body.get('max_context_length', 2048)
+def preprocess_prompt(prompt,max_context):
+    prompt_lines = [k.strip() for k in prompt.split('\n')]    
     while len(prompt_lines) >= 0 and get_encoded_length('\n'.join(prompt_lines)) > max_context:
         prompt_lines.pop(0)
+    return '\n'.join(prompt_lines)
 
-    prompt = '\n'.join(prompt_lines)
-
+def build_parameters(body):
     generate_params = {
         'max_new_tokens': int(body.get('max_new_tokens', body.get('max_length', 200))),
         'do_sample': bool(body.get('do_sample', True)),
-        'temperature': float(body.get('temperature', 0.5)),
+        'temperature': max(0.01,float(body.get('temperature', 0.5))),
         'top_p': float(body.get('top_p', 1)),
         'typical_p': float(body.get('typical_p', body.get('typical', 1))),
         'repetition_penalty': float(body.get('repetition_penalty', body.get('rep_pen', 1.1))),
