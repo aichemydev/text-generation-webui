@@ -40,7 +40,7 @@ settings = {
     'character': 'None',
     'name1': 'You',
     'name2': 'Assistant',
-    'context': 'This is a conversation with your Assistant. The Assistant is very helpful and is eager to chat with you and answer your questions.',
+    'context': 'This is a conversation with your Assistant. It is a computer program designed to help you with various tasks such as answering questions, providing recommendations, and helping with decision making. You can ask it anything you want and it will do its best to give you accurate and relevant information.',
     'greeting': '',
     'turn_template': '',
     'custom_stopping_strings': '',
@@ -54,12 +54,13 @@ settings = {
     'mode': 'chat',
     'chat_style': 'cai-chat',
     'instruction_template': 'None',
+    'chat-instruct_command': 'Continue the chat dialogue below. Write a single reply for the character "<|character|>".\n\n<|prompt|>',
     'chat_prompt_size': 2048,
     'chat_prompt_size_min': 0,
     'chat_prompt_size_max': 2048,
     'chat_generation_attempts': 1,
     'chat_generation_attempts_min': 1,
-    'chat_generation_attempts_max': 5,
+    'chat_generation_attempts_max': 10,
     'default_extensions': [],
     'chat_default_extensions': ["gallery"],
     'presets': {
@@ -122,6 +123,8 @@ parser.add_argument('--threads', type=int, default=0, help='Number of threads to
 parser.add_argument('--n_batch', type=int, default=512, help='Maximum number of prompt tokens to batch together when calling llama_eval.')
 parser.add_argument('--no-mmap', action='store_true', help='Prevent mmap from being used.')
 parser.add_argument('--mlock', action='store_true', help='Force the system to keep the model in RAM.')
+parser.add_argument('--cache-capacity', type=str, help='Maximum cache capacity. Examples: 2000MiB, 2GiB. When provided without units, bytes will be assumed.')
+parser.add_argument('--n-gpu-layers', type=int, default=0, help='Number of layers to offload to the GPU.')
 
 # GPTQ
 parser.add_argument('--wbits', type=int, default=0, help='Load a pre-quantized model with specified precision in bits. 2, 3, 4 and 8 are supported.')
@@ -159,6 +162,8 @@ parser.add_argument("--gradio-auth-path", type=str, help='Set the gradio authent
 
 # API
 parser.add_argument('--api', action='store_true', help='Enable the API extension.')
+parser.add_argument('--api-blocking-port', type=int, default=5000, help='The listening port for the blocking API.')
+parser.add_argument('--api-streaming-port', type=int,  default=5005, help='The listening port for the streaming API.')
 parser.add_argument('--public-api', action='store_true', help='Create a public URL for the API using Cloudfare.')
 
 # Multimodal
