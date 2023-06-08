@@ -2,13 +2,14 @@
     margin-left: auto;
     margin-right: auto;
     max-width: 800px;
-    height: calc(100vh - 306px);
+    height: calc(100vh - 296px);
     overflow-y: auto;
     padding-right: 20px;
     display: flex;
     flex-direction: column-reverse;
     word-break: break-word;
     overflow-wrap: anywhere;
+    padding-top: 1px;
 }
 
 .message {
@@ -24,7 +25,8 @@
     display: none;
 }
 
-.message-body {}
+.message-body {
+}
 
 .message-body p {
     font-size: 15px !important;
@@ -44,6 +46,7 @@
 .message-body code {
     overflow-x: auto;
 }
+
 .message-body :not(pre) > code {
     white-space: normal !important;
 }
@@ -57,27 +60,33 @@
 }
 
 .gradio-container .chat .assistant-message {
-  padding: 15px;
-  border-radius: 20px;
-  background-color: #0000000f;
-  margin-top: 9px !important;
-  margin-bottom: 18px !important;
+    padding: 15px;
+    border-radius: 20px;
+    background-color: #0000000f;
+    margin-top: 9px !important;
+    margin-bottom: 18px !important;
 }
 
 .gradio-container .chat .user-message {
-  padding: 15px;
-  border-radius: 20px;
-  margin-bottom: 9px !important;
+    padding: 15px;
+    border-radius: 20px;
+    margin-bottom: 9px !important;
 }
 
 .dark .chat .assistant-message {
-  background-color: #374151;
+    background-color: #374151;
+    border: 1px solid #4b5563;
+}
+
+.dark .chat .user-message {
+    background-color: #111827;
+    border: 1px solid #4b5563;
 }
 
 code {
-  background-color: white !important;
+    background-color: white !important;
 }
 
 .dark code {
-  background-color: #1a212f !important;
+    background-color: #1a212f !important;
 }

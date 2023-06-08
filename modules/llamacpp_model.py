@@ -6,26 +6,25 @@ Documentation:
 https://abetlen.github.io/llama-cpp-python/
 '''
 
-import logging
 import re
 
 from llama_cpp import Llama, LlamaCache
 
 from modules import shared
 from modules.callbacks import Iteratorize
+from modules.logging_colors import logger
 
 
 class LlamaCppModel:
     def __init__(self):
         self.initialized = False
 
-    def __del__(self):        
+    def __del__(self):
         self.model.__del__()
 
     @classmethod
     def from_pretrained(self, path):
         result = self()
-
         cache_capacity = 0
         if shared.args.cache_capacity is not None:
             if 'GiB' in shared.args.cache_capacity:
@@ -35,18 +34,18 @@ class LlamaCppModel:
             else:
                 cache_capacity = int(shared.args.cache_capacity)
 
-        logging.info("Cache capacity is " + str(cache_capacity) + " bytes")
-
+        logger.info("Cache capacity is " + str(cache_capacity) + " bytes")
         params = {
             'model_path': str(path),
-            'n_ctx': 2048,
-            'seed': 0,
+            'n_ctx': shared.args.n_ctx,
+            'seed': int(shared.args.llama_cpp_seed),
             'n_threads': shared.args.threads or None,
             'n_batch': shared.args.n_batch,
             'use_mmap': not shared.args.no_mmap,
             'use_mlock': shared.args.mlock,
             'n_gpu_layers': shared.args.n_gpu_layers
         }
+
         self.model = Llama(**params)
         if cache_capacity > 0:
             self.model.set_cache(LlamaCache(capacity_bytes=cache_capacity))
@@ -57,9 +56,10 @@ class LlamaCppModel:
     def encode(self, string):
         if type(string) is str:
             string = string.encode()
+
         return self.model.tokenize(string)
 
-    def generate(self, context="", token_count=20, temperature=1, top_p=1, top_k=50, repetition_penalty=1, callback=None):
+    def generate(self, context="", token_count=20, temperature=1, top_p=1, top_k=50, repetition_penalty=1, mirostat_mode=0, mirostat_tau=5, mirostat_eta=0.1, callback=None):
         context = context if type(context) is str else context.decode()
         completion_chunks = self.model.create_completion(
             prompt=context,
@@ -68,14 +68,19 @@ class LlamaCppModel:
             top_p=top_p,
             top_k=top_k,
             repeat_penalty=repetition_penalty,
+            mirostat_mode=int(mirostat_mode),
+            mirostat_tau=mirostat_tau,
+            mirostat_eta=mirostat_eta,
             stream=True
         )
+
         output = ""
         for completion_chunk in completion_chunks:
             text = completion_chunk['choices'][0]['text']
             output += text
             if callback:
                 callback(text)
+
         return output
 
     def generate_with_streaming(self, **kwargs):

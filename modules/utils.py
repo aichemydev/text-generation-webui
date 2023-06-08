@@ -29,7 +29,7 @@ def get_available_models():
 
 
 def get_available_presets():
-    return sorted(set((k.stem for k in Path('presets').glob('*.txt'))), key=natural_keys)
+    return sorted(set((k.stem for k in Path('presets').glob('*.yaml'))), key=natural_keys)
 
 
 def get_available_prompts():
@@ -58,10 +58,6 @@ def get_available_instruction_templates():
 
 def get_available_extensions():
     return sorted(set(map(lambda x: x.parts[1], Path('extensions').glob('*/script.py'))), key=natural_keys)
-
-
-def get_available_softprompts():
-    return ['None'] + sorted(set((k.stem for k in Path('softprompts').glob('*.zip'))), key=natural_keys)
 
 
 def get_available_loras():
