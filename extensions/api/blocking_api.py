@@ -11,7 +11,7 @@ from modules.text_generation import encode, generate_reply, stop_everything_even
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
-        if self.path == '/api/v1/model':
+        if self.path == '/v1/model':
             self.send_response(200)
             self.end_headers()
             response = json.dumps({
@@ -26,7 +26,7 @@ class Handler(BaseHTTPRequestHandler):
         content_length = int(self.headers['Content-Length'])
         body = json.loads(self.rfile.read(content_length).decode('utf-8'))
 
-        if self.path == '/api/v1/generate':
+        if self.path == '/v1/generate':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
@@ -58,7 +58,7 @@ class Handler(BaseHTTPRequestHandler):
 
             self.wfile.write(response.encode('utf-8'))
 
-        elif self.path == '/api/v1/chat':
+        elif self.path == '/v1/chat':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
@@ -86,7 +86,7 @@ class Handler(BaseHTTPRequestHandler):
 
             self.wfile.write(response.encode('utf-8'))
 
-        elif self.path == '/api/v1/stop-stream':
+        elif self.path == '/v1/stop-stream':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
@@ -99,7 +99,7 @@ class Handler(BaseHTTPRequestHandler):
 
             self.wfile.write(response.encode('utf-8'))
 
-        elif self.path == '/api/v1/token-count':
+        elif self.path == '/v1/token-count':
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
