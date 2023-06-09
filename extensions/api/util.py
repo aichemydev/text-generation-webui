@@ -5,6 +5,7 @@ from typing import Callable, Optional
 
 from modules import shared
 from modules.chat import load_character_memoized
+from modules.text_generation import get_encoded_length
 
 def preprocess_prompt(prompt,max_context):
     prompt_lines = [k.strip() for k in prompt.split('\n')]    

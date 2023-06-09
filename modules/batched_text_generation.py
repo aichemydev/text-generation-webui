@@ -15,15 +15,21 @@ from modules.callbacks import (Iteratorize, Stream,
 from modules.extensions import apply_extensions
 from modules.html_generator import generate_4chan_html, generate_basic_html
 from modules.models import clear_torch_cache, local_rank
-from modules.text_generation import fix_galactica, fix_gpt4chan, generate_softprompt_input_tensors, get_max_prompt_length, set_manual_seed
+from modules.text_generation import fix_galactica, fix_gpt4chan, get_max_prompt_length, set_manual_seed
 
 
 def encode(prompts, add_special_tokens=True, add_bos_token=True, truncation_length=None):
-    if shared.model_type in ['rwkv', 'llamacpp']:
-        encoding = shared.tokenizer(prompts,padding=True)
-        input_ids = encoding["input_ids"]
-        bs,ids_len = input_ids.size()
-        encoding["input_ids"] = np.array(input_ids).reshape(bs, ids_len)
+    if shared.model_type in ['rwkv', 'llamacpp']:        
+        inputs = []
+        for prompt in prompts:
+            input_ids = shared.tokenizer.encode(str(prompt))
+            input_ids = np.array(input_ids).reshape(1, len(input_ids))
+            inputs.append(input_ids)
+                        
+        encoding = {
+            "input_ids": inputs
+        }
+        
         return encoding
     else:
         encoding = shared.tokenizer(prompts, return_tensors='pt', add_special_tokens=add_special_tokens,padding=True)
@@ -43,9 +49,9 @@ def encode(prompts, add_special_tokens=True, add_bos_token=True, truncation_leng
 
     encoding["input_ids"] = input_ids
     if shared.model_type in ['rwkv', 'llamacpp'] or shared.args.cpu:
-        raise NotImplementedError()
+        return encoding
     elif shared.args.flexgen:
-        raise NotImplementedError()
+        return encoding
     elif shared.args.deepspeed:
         encoding = encoding.to(device=local_rank)
     else:
@@ -108,6 +114,10 @@ def generate_reply_wrapper(question, state, eos_token=None, stopping_strings=Non
 def generate_reply_batched(questions, state, eos_token=None, stopping_strings=None):
     state = apply_extensions('state', state)
     generate_func = apply_extensions('custom_generate_reply')
+
+    if shared.model_type in ['rwkv', 'llamacpp']:
+        generate_func = generate_reply_llamacpp
+
     if generate_func is None:
         if shared.model_name == 'None' or shared.model is None:
             logging.error("No model is loaded! Select one in the Model tab.")
@@ -130,6 +140,42 @@ def generate_reply_batched(questions, state, eos_token=None, stopping_strings=No
         yield reply
 
 
+def generate_reply_llamacpp(questions, original_questions, seed, state, eos_token=None, stopping_strings=None, is_chat=False):
+    seed = set_manual_seed(state['seed'])
+    generate_params = {'token_count': state['max_new_tokens']}
+    for k in ['temperature', 'top_p', 'top_k', 'repetition_penalty']:
+        generate_params[k] = state[k]
+
+    if shared.model_type == 'llamacpp':
+        for k in ['mirostat_mode', 'mirostat_tau', 'mirostat_eta']:
+            generate_params[k] = state[k]
+
+    t0 = time.time()
+    reply = ''
+    try:
+        if not is_chat:
+            yield ''
+        
+        # TODO: Temporary loop solution until llama-cpp-python will support batched inference
+        replies = []
+        for question in questions:
+            reply = shared.model.generate(context=question, **generate_params)
+            reply = apply_extensions('output', reply)
+            replies.append(reply)    
+
+        yield replies
+
+    except Exception:
+        traceback.print_exc()
+    finally:
+        t1 = time.time()
+        
+        original_tokens = sum(inputs.size for inputs in encode(original_questions)["input_ids"])
+        full_strs = [original_question + reply for original_question, reply in zip(original_questions,replies)]        
+        new_tokens = sum(inputs.size for inputs in encode(full_strs)["input_ids"]) - original_tokens
+        print(f'Output generated in {(t1-t0):.2f} seconds ({new_tokens/(t1-t0):.2f} tokens/s, {new_tokens} tokens, context {original_tokens}, seed {seed})')
+        return
+
 def generate_reply_HF(questions, original_questions, seed, state, eos_token=None, stopping_strings=None):
     generate_params = {}
     for k in ['max_new_tokens', 'do_sample', 'temperature', 'top_p', 'typical_p', 'repetition_penalty', 'encoder_repetition_penalty', 'top_k', 'min_length', 'no_repeat_ngram_size', 'num_beams', 'penalty_alpha', 'length_penalty', 'early_stopping']:
@@ -144,9 +190,6 @@ def generate_reply_HF(questions, original_questions, seed, state, eos_token=None
     if shared.args.deepspeed:
         generate_params.update({'synced_gpus': True})
     
-    if shared.soft_prompt:
-        raise NotImplementedError()
-
     # Encode the input
     encoding = encode(questions, add_bos_token=state['add_bos_token'], truncation_length=get_max_prompt_length(state))
     input_ids = encoding["input_ids"]
